@@ -9,11 +9,12 @@ linters:
     - gosimple
     - unused
     - ineffassign
-    - deadcode
     - revive
     - gocyclo
     - dupl
     - prealloc
     - gocritic
+    - misspell
+    - whitespace
   disable:
     - errcheck
