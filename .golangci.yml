@@ -1,0 +1,19 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - gofmt
+    - govet
+    - staticcheck
+    - gosimple
+    - unused
+    - ineffassign
+    - deadcode
+    - revive
+    - gocyclo
+    - dupl
+    - prealloc
+    - gocritic
+  disable:
+    - errcheck
