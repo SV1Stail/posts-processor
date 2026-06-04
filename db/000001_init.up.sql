@@ -12,3 +12,12 @@ CREATE TABLE IF NOT EXISTS original_posts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_original_posts ON original_posts("theme");
+
+CREATE TABLE IF NOT EXISTS system_prompts (
+    "id" SERIAL PRIMARY KEY,
+    "owner_name" VARCHAR NOT NULL,
+    "title_name" VARCHAR NOT NULL,
+    "message" JSONB,
+    "created" TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    "updated" TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);

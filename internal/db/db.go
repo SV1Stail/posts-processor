@@ -2,7 +2,10 @@ package db
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -10,8 +13,37 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	insertSystemPromptQuery = `
+	INSERT INTO system_prompts (owner_name, title_name, message, created, updated) 
+	VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+	`
+	updateSystemPromptQuery = `
+    UPDATE system_prompts 
+    SET message = $3::jsonb, updated = NOW() 
+    WHERE owner_name = $1 AND title_name = $2
+	`
+)
+
 type DB struct {
 	pool *pgxpool.Pool
+}
+
+type OriginalPost struct {
+	ID               string            `db:"id"`
+	Data             *OriginalPostData `db:"data"`
+	LinkNewPost      *string           `db:"link_new_post"`
+	OriginalChannel  *string           `db:"original_channel"`
+	URL              *string           `db:"url"`
+	OriginalImageURL *string           `db:"original_image_url"`
+	Theme            string            `db:"theme"`
+	CreatedAt        time.Time         `db:"created_at"`
+	UpdatedAt        time.Time         `db:"updated_at"`
+	Attempts         int               `db:"attempts"`
+}
+
+// TODO: заполнить
+type OriginalPostData struct {
 }
 
 // TODO: add config
@@ -62,4 +94,91 @@ func (db *DB) WrapWithTransAction(ctx context.Context, fn func(tx pgx.Tx) error)
 	}
 
 	return tx.Commit(ctx)
+}
+
+type GetOriginalPosts struct {
+	ID              string
+	Theme           string
+	OriginalChannel string
+}
+
+func (db *DB) GetOriginalPosts(ctx context.Context, in *GetOriginalPosts) ([]*OriginalPost, error) {
+	filter := make([]string, 0, 3)
+	args := make([]interface{}, 0, 3)
+	counter := 0
+	if in.ID != "" {
+		counter++
+		filter = append(filter, fmt.Sprintf("ID = $%d", counter))
+		args = append(args, in.ID)
+	}
+	if in.Theme != "" {
+		counter++
+		filter = append(filter, fmt.Sprintf("theme = $%d", counter))
+		args = append(args, in.Theme)
+	}
+	if in.OriginalChannel != "" {
+		counter++
+		filter = append(filter, fmt.Sprintf("original_channel = $%d", counter))
+		args = append(args, in.OriginalChannel)
+	}
+	baseQuery := `
+    SELECT 
+        id, data, link_new_post,
+        original_channel, url, original_image_url,
+        theme, created_at, updated_at, attempts
+    FROM posts
+	`
+	if len(filter) > 0 {
+		baseQuery += " WHERE " + strings.Join(filter, " AND ")
+	} else {
+		baseQuery += " WHERE 1=0"
+	}
+
+	rows, err := db.pool.Query(ctx, baseQuery, args...)
+	if err != nil {
+		log.Err(err).Ctx(ctx).Msg("fn failed")
+
+	}
+	defer rows.Close()
+
+	posts, err := scanPosts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}
+
+type UpsertSystemPrompt struct {
+	OwnerName     string
+	TitleName     string
+	systemMessage string
+}
+
+func (db *DB) InsertSystemPrompt(ctx context.Context, in *UpsertSystemPrompt) error {
+	systemMessage, err := json.Marshal(in.systemMessage)
+	if err != nil {
+		log.Err(err).Msg("failed marshal system chat message")
+
+		return err
+	}
+
+	_, err = db.pool.Exec(ctx, insertSystemPromptQuery, in.OwnerName,
+		in.TitleName, systemMessage)
+
+	return nil
+}
+
+func (db *DB) UpdateSystemPrompt(ctx context.Context, in *UpsertSystemPrompt) error {
+	systemMessage, err := json.Marshal(in.systemMessage)
+	if err != nil {
+		log.Err(err).Msg("failed marshal system chat message")
+
+		return err
+	}
+
+	_, err = db.pool.Exec(ctx, updateSystemPromptQuery, systemMessage,
+		in.OwnerName, in.TitleName)
+
+	return nil
 }

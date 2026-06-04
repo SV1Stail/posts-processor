@@ -1,57 +1,62 @@
 package db
 
 import (
-	"time"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func scanPost(row pgx.Row) (*Post, error) {
-	post := &Post{}
-	var publishAt time.Time
+func scanOriginalPost(row pgx.Row) (*OriginalPost, error) {
+	originalPost := &OriginalPost{}
+	data := make([]byte, 0)
 	err := row.Scan(
-		&post.ID,
-		&post.PublishChannel,
-		&post.Data,
-		&post.Status,
-		&publishAt,
-		&post.CreatedAt,
-		&post.UpdatedAt,
-		&post.Attempts,
+		&originalPost.ID,
+		&data,
+		&originalPost.LinkNewPost,
+		&originalPost.OriginalChannel,
+		&originalPost.URL,
+		&originalPost.OriginalImageURL,
+		&originalPost.Theme,
+		&originalPost.CreatedAt,
+		&originalPost.UpdatedAt,
+		&originalPost.Attempts,
 	)
 	if err != nil {
+		log.Err(err).Msg("scan failed")
 		return nil, err
 	}
-	post.PublishAt = timestamppb.New(publishAt)
+	originalPost.Data = convertByteIntoOriginalPostData(data)
 
-	return post, nil
+	return originalPost, nil
 }
 
-func scanPosts(rows pgx.Rows) ([]*Post, error) {
-	var posts []*Post
-	for rows.Next() {
-		post := &Post{}
-		var publishAt time.Time
+func convertByteIntoOriginalPostData(data []byte) *OriginalPostData {
+	return nil
+}
 
+func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
+	var originalPosts []*OriginalPost
+	data := make([]byte, 0)
+	for rows.Next() {
+		originalPost := &OriginalPost{}
 		err := rows.Scan(
-			&post.ID,
-			&post.PublishChannel,
-			&post.Data,
-			&post.Status,
-			&publishAt,
-			&post.CreatedAt,
-			&post.UpdatedAt,
-			&post.Attempts,
+			&originalPost.ID,
+			&data,
+			&originalPost.LinkNewPost,
+			&originalPost.OriginalChannel,
+			&originalPost.URL,
+			&originalPost.OriginalImageURL,
+			&originalPost.Theme,
+			&originalPost.CreatedAt,
+			&originalPost.UpdatedAt,
+			&originalPost.Attempts,
 		)
 		if err != nil {
 			log.Err(err).Msg("scan failed")
 			return nil, err
 		}
-		post.PublishAt = timestamppb.New(publishAt)
+		originalPost.Data = convertByteIntoOriginalPostData(data)
 
-		posts = append(posts, post)
+		originalPosts = append(originalPosts, originalPost)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -59,5 +64,5 @@ func scanPosts(rows pgx.Rows) ([]*Post, error) {
 		return nil, err
 	}
 
-	return posts, nil
+	return originalPosts, nil
 }

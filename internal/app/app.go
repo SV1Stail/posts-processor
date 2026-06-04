@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"sync"
 
 	"github.com/SV1Stail/posts-processor/internal/connectors"
@@ -10,16 +11,23 @@ import (
 type PostProcessor struct {
 	QueueSchedulerClient *connectors.QueueschedulerClient
 	DB                   *db.DB
+	LlmClient            LLM
 	stopCh               chan struct{}
 	mu                   *sync.Mutex
 }
 
-func NewQueueSchedulerService(queueSchedulerClient *connectors.QueueschedulerClient, db *db.DB) *PostProcessor {
+type LLM interface {
+	// without chat_id
+	NewChat(ctx context.Context, systemPrompt, userMessage string) (string, error)
+}
+
+func NewQueueSchedulerService(queueSchedulerClient *connectors.QueueschedulerClient, db *db.DB, llm LLM) *PostProcessor {
 	return &PostProcessor{
-		stopCh:               make(chan struct{}),
-		mu:                   &sync.Mutex{},
 		QueueSchedulerClient: queueSchedulerClient,
 		DB:                   db,
+		LlmClient:            llm,
+		stopCh:               make(chan struct{}),
+		mu:                   &sync.Mutex{},
 	}
 }
 
