@@ -1,6 +1,8 @@
 package db
 
 import (
+	"encoding/json"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -11,7 +13,7 @@ func scanOriginalPost(row pgx.Row) (*OriginalPost, error) {
 	err := row.Scan(
 		&originalPost.ID,
 		&data,
-		&originalPost.LinkNewPost,
+		&originalPost.LinkOriginalPost,
 		&originalPost.OriginalChannel,
 		&originalPost.URL,
 		&originalPost.OriginalImageURL,
@@ -24,13 +26,17 @@ func scanOriginalPost(row pgx.Row) (*OriginalPost, error) {
 		log.Err(err).Msg("scan failed")
 		return nil, err
 	}
-	originalPost.Data = convertByteIntoOriginalPostData(data)
+	originalPost.Data, err = convertByteIntoOriginalPostData(data)
+	if err != nil {
+		log.Err(err).
+			Str("original_post_id", originalPost.ID).
+			Str("linked_post", *originalPost.LinkOriginalPost).
+			Msg("failed unmarshal data after scan")
+
+		return nil, err
+	}
 
 	return originalPost, nil
-}
-
-func convertByteIntoOriginalPostData(data []byte) *OriginalPostData {
-	return nil
 }
 
 func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
@@ -41,7 +47,7 @@ func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
 		err := rows.Scan(
 			&originalPost.ID,
 			&data,
-			&originalPost.LinkNewPost,
+			&originalPost.LinkOriginalPost,
 			&originalPost.OriginalChannel,
 			&originalPost.URL,
 			&originalPost.OriginalImageURL,
@@ -54,7 +60,15 @@ func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
 			log.Err(err).Msg("scan failed")
 			return nil, err
 		}
-		originalPost.Data = convertByteIntoOriginalPostData(data)
+		originalPost.Data, err = convertByteIntoOriginalPostData(data)
+		if err != nil {
+			log.Err(err).
+				Str("original_post_id", originalPost.ID).
+				Str("linked_post", *originalPost.LinkOriginalPost).
+				Msg("failed unmarshal data after scan")
+
+			continue
+		}
 
 		originalPosts = append(originalPosts, originalPost)
 	}
@@ -65,4 +79,16 @@ func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
 	}
 
 	return originalPosts, nil
+}
+
+func convertByteIntoOriginalPostData(data []byte) (*OriginalPostData, error) {
+	var text string
+	err := json.Unmarshal(data, &text)
+	if err != nil {
+		return nil, err
+	}
+
+	return &OriginalPostData{
+		Text: text,
+	}, nil
 }

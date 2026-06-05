@@ -32,7 +32,7 @@ type DB struct {
 type OriginalPost struct {
 	ID               string            `db:"id"`
 	Data             *OriginalPostData `db:"data"`
-	LinkNewPost      *string           `db:"link_new_post"`
+	LinkOriginalPost *string           `db:"link_original_post"`
 	OriginalChannel  *string           `db:"original_channel"`
 	URL              *string           `db:"url"`
 	OriginalImageURL *string           `db:"original_image_url"`
@@ -44,6 +44,7 @@ type OriginalPost struct {
 
 // TODO: заполнить
 type OriginalPostData struct {
+	Text string
 }
 
 // TODO: add config
@@ -123,7 +124,7 @@ func (db *DB) GetOriginalPosts(ctx context.Context, in *GetOriginalPosts) ([]*Or
 	}
 	baseQuery := `
     SELECT 
-        id, data, link_new_post,
+        id, data, link_original_post,
         original_channel, url, original_image_url,
         theme, created_at, updated_at, attempts
     FROM posts
@@ -133,6 +134,7 @@ func (db *DB) GetOriginalPosts(ctx context.Context, in *GetOriginalPosts) ([]*Or
 	} else {
 		baseQuery += " WHERE 1=0"
 	}
+	baseQuery += " ORDER BY created_at DESC LIMIT 10"
 
 	rows, err := db.pool.Query(ctx, baseQuery, args...)
 	if err != nil {

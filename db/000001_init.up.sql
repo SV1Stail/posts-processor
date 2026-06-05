@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS original_posts (
     "id" VARCHAR NOT NULL PRIMARY KEY,
     "data" JSONB NOT NULL,
-    "link_new_post" VARCHAR,
+    "link_original_post" VARCHAR,
     "original_channel" VARCHAR,
     "url" VARCHAR,
     "original_image_url" VARCHAR,

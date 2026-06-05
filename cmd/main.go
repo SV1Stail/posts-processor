@@ -22,4 +22,6 @@ func main() {
 
 	app := app.NewQueueSchedulerService(queueschedulerClient, db, mistralClient)
 	defer app.Close()
+
+	app.ProcessPosts(ctx)
 }

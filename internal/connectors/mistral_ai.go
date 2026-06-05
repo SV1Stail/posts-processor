@@ -212,7 +212,8 @@ func (mc *MistralClient) NewChat(ctx context.Context, systemPrompt, userMessage 
 
 		return "", err
 	}
-	log.Info().Ctx(ctx).Interface("response", chatResp).Msg("LOL")
+
+	log.Info().Ctx(ctx).Interface("response", chatResp).Msg("Mistral resp")
 
 	return chatResp.Choices[0].Message.Content, nil
 }

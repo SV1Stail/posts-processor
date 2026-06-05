@@ -4,11 +4,9 @@ go 1.25.0
 
 require (
 	github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260602090728-830cbf0d5cb4
-	github.com/gage-technologies/mistral-go v1.1.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/rs/zerolog v1.35.1
 	google.golang.org/grpc v1.81.1
-	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -22,4 +20,5 @@ require (
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 )
