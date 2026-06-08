@@ -22,10 +22,15 @@ type Summary struct {
 func (pp *PostProcessor) ProcessPosts(ctx context.Context) error {
 	log.Info().Ctx(ctx).Msg("start ProcessPosts ...")
 	originalPosts, err := pp.DB.GetOriginalPosts(ctx, &db.GetOriginalPosts{
-		Theme: "finance",
+		Theme: "test",
 	})
 	if err != nil {
 		return err
+	}
+
+	if len(originalPosts) <= 1 {
+		log.Warn().Ctx(ctx).Msg("no posts to process")
+		return nil
 	}
 
 	var userMessage string
@@ -43,8 +48,6 @@ func (pp *PostProcessor) ProcessPosts(ctx context.Context) error {
 	// raw = bytes.ReplaceAll(raw, []byte{'\t'}, []byte(``))
 	// raw = bytes.ReplaceAll(raw, []byte{'\r'}, []byte(``))
 
-	// log.Debug().Interface("result", resp).Msg("success")
-
 	post, err := pp.QueueSchedulerClient.CreatePost(ctx, &queue_scheduler_pb.CreatePostRequest{
 		PublishChannel: publishChannel,
 		Data: &queue_scheduler_pb.PublishPostData{
@@ -52,7 +55,7 @@ func (pp *PostProcessor) ProcessPosts(ctx context.Context) error {
 			Body:    resp,
 			PostUrl: postUrls(originalPosts),
 		},
-		PublishAt: timestamppb.New(time.Date(2026, 12, 25, 10, 30, 0, 0, time.UTC)),
+		PublishAt: timestamppb.New(time.Now().UTC().Add(12 * time.Hour)),
 	})
 	if err != nil {
 		log.Err(err).Ctx(ctx).Msg("Create post failed")
@@ -71,4 +74,13 @@ func postUrls(posts []*db.OriginalPost) []string {
 	}
 
 	return urls
+}
+
+func (pp *PostProcessor) pingCLient(ctx context.Context) error {
+	err := pp.QueueSchedulerClient.CheckConnectionState(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

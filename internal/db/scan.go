@@ -15,7 +15,6 @@ func scanOriginalPost(row pgx.Row) (*OriginalPost, error) {
 		&data,
 		&originalPost.LinkOriginalPost,
 		&originalPost.OriginalChannel,
-		&originalPost.URL,
 		&originalPost.OriginalImageURL,
 		&originalPost.Theme,
 		&originalPost.CreatedAt,
@@ -41,15 +40,14 @@ func scanOriginalPost(row pgx.Row) (*OriginalPost, error) {
 
 func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
 	var originalPosts []*OriginalPost
-	data := make([]byte, 0)
 	for rows.Next() {
 		originalPost := &OriginalPost{}
+		data := make([]byte, 0)
 		err := rows.Scan(
 			&originalPost.ID,
 			&data,
 			&originalPost.LinkOriginalPost,
 			&originalPost.OriginalChannel,
-			&originalPost.URL,
 			&originalPost.OriginalImageURL,
 			&originalPost.Theme,
 			&originalPost.CreatedAt,

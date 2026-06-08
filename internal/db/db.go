@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	post_processor_pb "github.com/SV1Stail/tg-project-protos/gen/go/posts_processor"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -34,7 +36,6 @@ type OriginalPost struct {
 	Data             *OriginalPostData `db:"data"`
 	LinkOriginalPost *string           `db:"link_original_post"`
 	OriginalChannel  *string           `db:"original_channel"`
-	URL              *string           `db:"url"`
 	OriginalImageURL *string           `db:"original_image_url"`
 	Theme            string            `db:"theme"`
 	CreatedAt        time.Time         `db:"created_at"`
@@ -51,7 +52,7 @@ type OriginalPostData struct {
 func MustNewDB(ctx context.Context) *DB {
 	dsn := os.Getenv("DATABASE_DSN")
 	if dsn == "" {
-		dsn = "postgres://postgres:postgres@localhost:5432/posts_processor?sslmode=disable"
+		dsn = "postgres://postgres:postgres@localhost:5433/posts_processor?sslmode=disable"
 	}
 
 	config, err := pgxpool.ParseConfig(dsn)
@@ -125,9 +126,9 @@ func (db *DB) GetOriginalPosts(ctx context.Context, in *GetOriginalPosts) ([]*Or
 	baseQuery := `
     SELECT 
         id, data, link_original_post,
-        original_channel, url, original_image_url,
+        original_channel, original_image_url,
         theme, created_at, updated_at, attempts
-    FROM posts
+    FROM original_posts
 	`
 	if len(filter) > 0 {
 		baseQuery += " WHERE " + strings.Join(filter, " AND ")
@@ -181,6 +182,108 @@ func (db *DB) UpdateSystemPrompt(ctx context.Context, in *UpsertSystemPrompt) er
 
 	_, err = db.pool.Exec(ctx, updateSystemPromptQuery, systemMessage,
 		in.OwnerName, in.TitleName)
+	if err != nil {
+		log.Err(err).Msg("failed update system prompt")
+
+		return err
+	}
 
 	return nil
+}
+
+func (db *DB) CreateOriginalPost(ctx context.Context, in *post_processor_pb.CreateOriginalPostRequest) error {
+	query := `
+	INSERT INTO original_posts (
+	"id", "data", "link_original_post",
+    "original_channel", "theme",
+    "created_at", "updated_at") 
+	VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`
+	generatedID := uuid.NewString()
+	_, err := db.pool.Exec(ctx, query, generatedID, []byte(in.GetText()),
+		in.GetLinkOriginalPost(), in.GetOriginalChannel(), in.GetTheme())
+	if err != nil {
+		log.Err(err).Msg("failed insert original post")
+
+		return err
+	}
+	log.Info().Ctx(ctx).Msg("success insert original post")
+
+	return err
+}
+
+func (db *DB) DeleteOriginalPostsByChannel(ctx context.Context, in *post_processor_pb.DeleteOriginalPostsByChannelRequest) error {
+	query := `
+	DELETE FROM original_posts 
+	WHERE original_channel = $1
+	`
+
+	_, err := db.pool.Exec(ctx, query, in.GetOriginalChannel())
+	if err != nil {
+		log.Err(err).Msg("failed delete original post")
+
+		return err
+	}
+	log.Info().Ctx(ctx).Msg("success delete original post")
+
+	return err
+}
+
+func (db *DB) GetOriginalPostsFromDB(ctx context.Context, in *post_processor_pb.GetOriginalPostsFromDBRequest) (*post_processor_pb.GetOriginalPostsFromDBResponse, error) {
+	query := `
+	SELECT 
+		id, data, link_original_post,
+		original_channel, original_image_url,
+		theme, created_at, updated_at 
+	FROM original_posts 
+	ORDER BY created_at DESC
+	OFFSET $1
+	LIMIT $2
+	`
+
+	rows, err := db.pool.Query(ctx, query, in.GetOffset(), in.GetLimit())
+	if err != nil {
+		log.Err(err).Msg("failed delete original post")
+
+		return nil, err
+	}
+
+	originalPosts := make([]*post_processor_pb.OriginalPost, 0)
+	for rows.Next() {
+		orPost := post_processor_pb.OriginalPost{}
+		data := make([]byte, 0)
+		err := rows.Scan(
+			&orPost.Id,
+			&data,
+			&orPost.LinkOriginalPost,
+			&orPost.OriginalChannel,
+			&orPost.OriginalImageUrl,
+			&orPost.Theme,
+			&orPost.CreatedAt,
+			&orPost.UpdatedAt,
+		)
+		if err != nil {
+			log.Err(err).Msg("scan failed")
+			return nil, err
+		}
+
+		d, err := convertByteIntoOriginalPostData(data)
+		if err != nil {
+			log.Err(err).
+				Str("original_post_id", orPost.GetId()).
+				Str("linked_post", orPost.GetLinkOriginalPost()).
+				Msg("failed unmarshal data after scan")
+
+			continue
+		}
+		orPost.Data = d.Text
+
+		originalPosts = append(originalPosts, &orPost)
+	}
+
+	log.Info().Ctx(ctx).Msg("success GetOriginalPostsFromDB original post")
+
+	return &post_processor_pb.GetOriginalPostsFromDBResponse{
+		Posts: originalPosts,
+	}, err
 }

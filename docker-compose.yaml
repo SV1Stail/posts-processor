@@ -1,5 +1,6 @@
 services:
   db:
+    container_name: db-posts-processor
     image: postgres:17.10-alpine3.23
     restart: always
     hostname: db
@@ -7,7 +8,7 @@ services:
       POSTGRES_PASSWORD: "postgres"
       POSTGRES_DB: "posts_processor"
     ports:
-      - "5432:5432"
+      - "6432:5432"
     volumes:
       - "postgres_volume:/var/lib/postgresql/data"
     healthcheck:
@@ -17,11 +18,12 @@ services:
       retries: 5
 
   migrator:
+    container_name: migrator-posts-processor
     build: 
       context: .
       dockerfile: build/docker/migrate/postgres/Dockerfile
     environment:
-      POSTGRES_HOST: db
+      POSTGRES_HOST: db-posts-processor
       POSTGRES_DB: posts_processor
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -32,6 +34,7 @@ services:
 
 # прод
   # posts-processor:
+  #   container_name: posts-processor
   #   build: 
   #     context: .
   #     dockerfile: ./build/docker/Dockerfile
@@ -39,7 +42,8 @@ services:
   #   ports:
   #     - 6090:8090
   #   environment:
-  #     DATABASE_DSN: "postgres://postgres:postgres@db:5432/posts_processor?sslmode=disable"
+      # DATABASE_DSN: "postgres://postgres:postgres@db-posts-processor:5432/posts_processor?sslmode=disable"
+      # GRPC_PORT: "8090"
   #   healthcheck:
   #     test: ["CMD", "nc", "-z", "localhost", "8090"]
   #     interval: 10s
@@ -56,18 +60,21 @@ services:
 
 # local
   posts-processor:
+    container_name: posts-processor
     build: 
       context: .
       dockerfile: ./local/docker/Dockerfile
     restart: always
     ports:
-      - 5090:8090
+      - 6090:8090
     volumes:
       - "./local/bin:/opt/bin"
       - "./local/etc:/opt/etc"
     entrypoint: ["/opt/bin/posts-processor"]
     environment:
-      DATABASE_DSN: "postgres://postgres:postgres@db:5432/posts_processor?sslmode=disable"
+      DATABASE_DSN: "postgres://postgres:postgres@db-posts-processor:5432/posts_processor?sslmode=disable"
+      GRPC_PORT: "8090"
+      QUEUE_SCHEDULER_ADDR: "queue-scheduler:8090"
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8090"]
       interval: 10s
@@ -82,3 +89,8 @@ services:
 
 volumes:
     postgres_volume:
+
+networks:
+  default:
+    name: shared-net
+    external: true
