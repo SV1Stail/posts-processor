@@ -17,7 +17,7 @@ const (
 	Endpoint          = "https://api.mistral.ai"
 	CodestralEndpoint = "https://codestral.mistral.ai"
 	DefaultMaxRetries = 5
-	DefaultTimeout    = 120 * time.Second
+	DefaultTimeout    = 10 * time.Second
 	mistralTiny       = "mistral-tiny"
 
 	roleUser      = "user"

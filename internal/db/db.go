@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -34,9 +36,9 @@ type DB struct {
 type OriginalPost struct {
 	ID               string            `db:"id"`
 	Data             *OriginalPostData `db:"data"`
-	LinkOriginalPost *string           `db:"link_original_post"`
-	OriginalChannel  *string           `db:"original_channel"`
-	OriginalImageURL *string           `db:"original_image_url"`
+	LinkOriginalPost string            `db:"link_original_post"`
+	OriginalChannel  string            `db:"original_channel"`
+	OriginalImageURL string            `db:"original_image_url"`
 	Theme            string            `db:"theme"`
 	CreatedAt        time.Time         `db:"created_at"`
 	UpdatedAt        time.Time         `db:"updated_at"`
@@ -194,20 +196,27 @@ func (db *DB) UpdateSystemPrompt(ctx context.Context, in *UpsertSystemPrompt) er
 func (db *DB) CreateOriginalPost(ctx context.Context, in *post_processor_pb.CreateOriginalPostRequest) error {
 	query := `
 	INSERT INTO original_posts (
-	"id", "data", "link_original_post",
-    "original_channel", "theme",
-    "created_at", "updated_at") 
+		id, data, link_original_post,
+		original_channel, theme,
+		created_at, updated_at) 
 	VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
 	`
+	jsonData, err := json.Marshal(in.GetText())
+	if err != nil {
+		log.Err(err).Msg("failed marshal text")
+
+		return err
+	}
+
 	generatedID := uuid.NewString()
-	_, err := db.pool.Exec(ctx, query, generatedID, []byte(in.GetText()),
+	_, err = db.pool.Exec(ctx, query, generatedID, jsonData,
 		in.GetLinkOriginalPost(), in.GetOriginalChannel(), in.GetTheme())
 	if err != nil {
 		log.Err(err).Msg("failed insert original post")
 
 		return err
 	}
-	log.Info().Ctx(ctx).Msg("success insert original post")
+	log.Info().Ctx(ctx).Msg("SUCCESS insert original post")
 
 	return err
 }
@@ -224,7 +233,7 @@ func (db *DB) DeleteOriginalPostsByChannel(ctx context.Context, in *post_process
 
 		return err
 	}
-	log.Info().Ctx(ctx).Msg("success delete original post")
+	log.Info().Ctx(ctx).Msg("SUCCESS delete original post")
 
 	return err
 }
@@ -252,19 +261,35 @@ func (db *DB) GetOriginalPostsFromDB(ctx context.Context, in *post_processor_pb.
 	for rows.Next() {
 		orPost := post_processor_pb.OriginalPost{}
 		data := make([]byte, 0)
+		var linkOriginalPost, originalChannel, originalImageURL sql.NullString
+		var createdAt, updatedAt time.Time
+
 		err := rows.Scan(
 			&orPost.Id,
 			&data,
-			&orPost.LinkOriginalPost,
-			&orPost.OriginalChannel,
-			&orPost.OriginalImageUrl,
+			&linkOriginalPost,
+			&originalChannel,
+			&originalImageURL,
 			&orPost.Theme,
-			&orPost.CreatedAt,
-			&orPost.UpdatedAt,
+			&createdAt,
+			&updatedAt,
 		)
 		if err != nil {
 			log.Err(err).Msg("scan failed")
 			return nil, err
+		}
+
+		orPost.CreatedAt = timestamppb.New(createdAt)
+		orPost.UpdatedAt = timestamppb.New(updatedAt)
+
+		if linkOriginalPost.Valid {
+			orPost.LinkOriginalPost = originalImageURL.String
+		}
+		if originalChannel.Valid {
+			orPost.OriginalChannel = originalChannel.String
+		}
+		if originalImageURL.Valid {
+			orPost.OriginalImageUrl = originalImageURL.String
 		}
 
 		d, err := convertByteIntoOriginalPostData(data)
@@ -281,7 +306,7 @@ func (db *DB) GetOriginalPostsFromDB(ctx context.Context, in *post_processor_pb.
 		originalPosts = append(originalPosts, &orPost)
 	}
 
-	log.Info().Ctx(ctx).Msg("success GetOriginalPostsFromDB original post")
+	log.Info().Ctx(ctx).Msg("SUCCESS GetOriginalPostsFromDB original post")
 
 	return &post_processor_pb.GetOriginalPostsFromDBResponse{
 		Posts: originalPosts,

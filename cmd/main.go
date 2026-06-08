@@ -12,11 +12,13 @@ import (
 	post_processor_pb "github.com/SV1Stail/tg-project-protos/gen/go/posts_processor"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	db := db.MustNewDB(ctx)
 	queueSchedulerClient, err := connectors.NewQueueSchedulerClient(&connectors.QueueschedulerConfig{
 		Address: "queue-scheduler:8090",
@@ -32,6 +34,7 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	post_processor_pb.RegisterPostsProcessorServer(grpcServer, app)
+	reflection.Register(grpcServer)
 
 	lis, err := net.Listen("tcp", ":"+app.Port)
 	if err != nil {

@@ -3,6 +3,8 @@ module github.com/SV1Stail/posts-processor
 go 1.25.0
 
 require (
+	github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606095012-4ef284fb6d7d
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/mbranch/safe-go v1.0.0
 	github.com/rs/zerolog v1.35.1
@@ -11,8 +13,6 @@ require (
 )
 
 require (
-	github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606095012-4ef284fb6d7d // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect

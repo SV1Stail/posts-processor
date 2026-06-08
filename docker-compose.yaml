@@ -31,6 +31,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  
+  grpcui:
+    image: fullstorydev/grpcui
+    entrypoint: ["grpcui", "-plaintext", "-bind", "0.0.0.0", "-port", "8080", "posts-processor:8090"]
+    ports:
+      - 6092:8080
+    restart: always
+    depends_on:
+      posts-processor:
+        condition: service_started
 
 # прод
   # posts-processor:
@@ -40,7 +50,8 @@ services:
   #     dockerfile: ./build/docker/Dockerfile
   #   restart: always
   #   ports:
-  #     - 6090:8090
+      # - 6090:8090
+      # - 6091:8080 # HTTP
   #   environment:
       # DATABASE_DSN: "postgres://postgres:postgres@db-posts-processor:5432/posts_processor?sslmode=disable"
       # GRPC_PORT: "8090"
@@ -66,7 +77,8 @@ services:
       dockerfile: ./local/docker/Dockerfile
     restart: always
     ports:
-      - 6090:8090
+      - 6090:8090 # gRPC
+      - 6091:8080 # HTTP
     volumes:
       - "./local/bin:/opt/bin"
       - "./local/etc:/opt/etc"
@@ -75,6 +87,7 @@ services:
       DATABASE_DSN: "postgres://postgres:postgres@db-posts-processor:5432/posts_processor?sslmode=disable"
       GRPC_PORT: "8090"
       QUEUE_SCHEDULER_ADDR: "queue-scheduler:8090"
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8090"]
       interval: 10s

@@ -1,7 +1,3 @@
-github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606093011-2c4485b6d7c0 h1:IPiKqcQK8lvnmSIp+Rpf0qKtPcgy2oHsfwBsHrS02+g=
-github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606093011-2c4485b6d7c0/go.mod h1:sF1OwXbNHgrQtBYk32+bgEy+oV8ooCpDVNuE8PbxfR4=
-github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606093640-89d60193fd59 h1:sYprWcITRedNap5HCYH7LcYLg4iQqyf2EME0PwGWye4=
-github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606093640-89d60193fd59/go.mod h1:sF1OwXbNHgrQtBYk32+bgEy+oV8ooCpDVNuE8PbxfR4=
 github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606095012-4ef284fb6d7d h1:aykFuso6GRItO0Rc1as0t6g+VEaR9acmwvHlh5ZTh8E=
 github.com/SV1Stail/tg-project-protos/gen/go v0.0.0-20260606095012-4ef284fb6d7d/go.mod h1:sF1OwXbNHgrQtBYk32+bgEy+oV8ooCpDVNuE8PbxfR4=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=

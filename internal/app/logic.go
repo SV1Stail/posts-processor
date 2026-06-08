@@ -62,7 +62,7 @@ func (pp *PostProcessor) ProcessPosts(ctx context.Context) error {
 
 		return err
 	}
-	log.Info().Ctx(ctx).Str("post_id", post.Post.Id).Msg("create post success")
+	log.Info().Ctx(ctx).Str("post_id", post.Post.Id).Msg("create post SUCCESS")
 
 	return nil
 }
@@ -70,7 +70,7 @@ func (pp *PostProcessor) ProcessPosts(ctx context.Context) error {
 func postUrls(posts []*db.OriginalPost) []string {
 	urls := make([]string, 0, 10)
 	for _, post := range posts {
-		urls = append(urls, *post.LinkOriginalPost)
+		urls = append(urls, post.LinkOriginalPost)
 	}
 
 	return urls

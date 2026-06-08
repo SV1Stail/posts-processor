@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	ctxTimeout   = 10 * time.Second
+	ctxTimeout   = 30 * time.Second
 	timerTimeout = 5 * time.Second
 )
 
 func (pp *PostProcessor) Workers(ctx context.Context) {
 	go pp.runJob(ctx, timerTimeout, pp.ProcessPosts)
-	go pp.runJob(ctx, timerTimeout, pp.pingCLient)
+	// go pp.runJob(ctx, timerTimeout, pp.pingCLient)
 
 	<-pp.stopCh
 }
@@ -41,10 +41,10 @@ mainloop:
 		case <-pp.stopCh:
 			break mainloop
 		case <-ctx.Done():
-			log.Err(ctx.Err()).Ctx(ctx).Msg("context done")
+			log.Err(ctx.Err()).Ctx(ctx).Str("method", method.Name()).Msg("context done")
 			break mainloop
 		case <-timer.C:
-			log.Info().Ctx(ctx).Msg("start job")
+			log.Info().Ctx(ctx).Str("method", method.Name()).Msg("start job")
 			func() {
 				ctx, cancel := context.WithTimeout(ctx, ctxTimeout)
 				defer cancel()
@@ -56,11 +56,12 @@ mainloop:
 					var panicErr safe.PanicError
 					if errors.As(err, &panicErr) {
 						log.Err(err).Ctx(ctx).
+							Str("method", method.Name()).
 							Interface("panic_value", panicErr.Panic()).
 							Interface("stack", panicErr.StackTrace()).
 							Msg("job panicked")
 					}
-					log.Err(err).Ctx(ctx).Msg("job failed")
+					log.Err(err).Ctx(ctx).Str("method", method.Name()).Msg("job failed")
 				}
 			}()
 

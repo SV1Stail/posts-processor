@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"encoding/json"
 
 	"github.com/jackc/pgx/v5"
@@ -8,69 +9,94 @@ import (
 )
 
 func scanOriginalPost(row pgx.Row) (*OriginalPost, error) {
-	originalPost := &OriginalPost{}
+	orPost := &OriginalPost{}
 	data := make([]byte, 0)
+	var linkOriginalPost, originalChannel, originalImageURL sql.NullString
+
 	err := row.Scan(
-		&originalPost.ID,
+		&orPost.ID,
 		&data,
-		&originalPost.LinkOriginalPost,
-		&originalPost.OriginalChannel,
-		&originalPost.OriginalImageURL,
-		&originalPost.Theme,
-		&originalPost.CreatedAt,
-		&originalPost.UpdatedAt,
-		&originalPost.Attempts,
+		&linkOriginalPost,
+		&originalChannel,
+		&originalImageURL,
+		&orPost.Theme,
+		&orPost.CreatedAt,
+		&orPost.UpdatedAt,
+		&orPost.Attempts,
 	)
 	if err != nil {
 		log.Err(err).Msg("scan failed")
 		return nil, err
 	}
-	originalPost.Data, err = convertByteIntoOriginalPostData(data)
+
+	if linkOriginalPost.Valid {
+		orPost.LinkOriginalPost = originalImageURL.String
+	}
+	if originalChannel.Valid {
+		orPost.OriginalChannel = originalChannel.String
+	}
+	if originalImageURL.Valid {
+		orPost.OriginalImageURL = originalImageURL.String
+	}
+
+	orPost.Data, err = convertByteIntoOriginalPostData(data)
 	if err != nil {
 		log.Err(err).
-			Str("original_post_id", originalPost.ID).
-			Str("linked_post", *originalPost.LinkOriginalPost).
+			Str("original_post_id", orPost.ID).
+			Str("linked_post", orPost.LinkOriginalPost).
 			Msg("failed unmarshal data after scan")
 
 		return nil, err
 	}
 
-	return originalPost, nil
+	return orPost, nil
 }
 
 func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
 	var originalPosts []*OriginalPost
 	for rows.Next() {
-		originalPost := &OriginalPost{}
+		orPost := &OriginalPost{}
 		data := make([]byte, 0)
+		var linkOriginalPost, originalChannel, originalImageURL sql.NullString
+
 		err := rows.Scan(
-			&originalPost.ID,
+			&orPost.ID,
 			&data,
-			&originalPost.LinkOriginalPost,
-			&originalPost.OriginalChannel,
-			&originalPost.OriginalImageURL,
-			&originalPost.Theme,
-			&originalPost.CreatedAt,
-			&originalPost.UpdatedAt,
-			&originalPost.Attempts,
+			&linkOriginalPost,
+			&originalChannel,
+			&originalImageURL,
+			&orPost.Theme,
+			&orPost.CreatedAt,
+			&orPost.UpdatedAt,
+			&orPost.Attempts,
 		)
 		if err != nil {
 			log.Err(err).Msg("scan failed")
 			return nil, err
 		}
-		originalPost.Data, err = convertByteIntoOriginalPostData(data)
+
+		if linkOriginalPost.Valid {
+			orPost.LinkOriginalPost = originalImageURL.String
+		}
+		if originalChannel.Valid {
+			orPost.OriginalChannel = originalChannel.String
+		}
+		if originalImageURL.Valid {
+			orPost.OriginalImageURL = originalImageURL.String
+		}
+
+		orPost.Data, err = convertByteIntoOriginalPostData(data)
 		if err != nil {
 			log.Err(err).
-				Str("original_post_id", originalPost.ID).
-				Str("linked_post", *originalPost.LinkOriginalPost).
+				Str("original_post_id", orPost.ID).
+				Str("linked_post", orPost.LinkOriginalPost).
 				Msg("failed unmarshal data after scan")
 
 			continue
 		}
 
-		originalPosts = append(originalPosts, originalPost)
+		originalPosts = append(originalPosts, orPost)
 	}
-
 	if err := rows.Err(); err != nil {
 		log.Err(err).Msg("rows error")
 		return nil, err

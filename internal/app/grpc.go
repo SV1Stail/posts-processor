@@ -11,7 +11,7 @@ func (pp *PostProcessor) CreateOriginalPost(ctx context.Context,
 ) (*post_processor_pb.CreatePostCreateOriginalPostResponse, error) {
 	err := pp.DB.CreateOriginalPost(ctx, req)
 
-	return &post_processor_pb.CreatePostCreateOriginalPostResponse{}, err
+	return &post_processor_pb.CreatePostCreateOriginalPostResponse{Id: "some_id"}, err
 }
 
 func (pp *PostProcessor) CreateOriginalPosts(ctx context.Context,
