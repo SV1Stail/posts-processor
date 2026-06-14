@@ -1,0 +1,121 @@
+services:
+  db:
+    container_name: db-posts-processor
+    image: postgres:17.10-alpine3.23
+    restart: always
+    hostname: db
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "posts_processor"
+    ports:
+      - "6432:5432"
+    volumes:
+      - "postgres_volume:/var/lib/postgresql/data"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrator:
+    container_name: migrator-posts-processor
+    build: 
+      context: .
+      dockerfile: build/docker/migrate/postgres/Dockerfile
+    environment:
+      POSTGRES_HOST: db-posts-processor
+      POSTGRES_DB: posts_processor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+  
+  grpcui:
+    container_name: grpcui-posts-processor
+    image: fullstorydev/grpcui
+    entrypoint: ["grpcui", "-plaintext", "-bind", "0.0.0.0", "-port", "8080", "posts-processor:8090"]
+    ports:
+      - 6092:8080
+    restart: always
+    depends_on:
+      posts-processor:
+        condition: service_started
+
+# прод
+  # posts-processor:
+  #   container_name: posts-processor
+  #   build: 
+  #     context: .
+  #     dockerfile: ./build/docker/Dockerfile
+  #   restart: always
+  #   ports:
+      # - 6090:8090
+      # - 6091:8080 # HTTP
+  #   environment:
+      # DATABASE_DSN: "postgres://postgres:postgres@db-posts-processor:5432/posts_processor?sslmode=disable"
+      # GRPC_PORT: "8090"
+  #   healthcheck:
+  #     test: ["CMD", "nc", "-z", "localhost", "8090"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 5s
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     migrator:
+  #       condition: service_completed_successfully
+
+
+
+# local
+  posts-processor:
+    container_name: posts-processor
+    build: 
+      context: .
+      dockerfile: ./local/docker/Dockerfile
+    restart: always
+    ports:
+      - 6090:8090 # gRPC
+      - 6091:8080 # HTTP
+    volumes:
+      - "./local/bin:/opt/bin"
+      - "./local/etc:/opt/etc"
+    entrypoint: ["/opt/bin/posts-processor"]
+    environment:
+      DATABASE_DSN: "postgres://postgres:postgres@db-posts-processor:5432/posts_processor?sslmode=disable"
+      GRPC_PORT: "8090"
+      QUEUE_SCHEDULER_ADDR: "queue-scheduler:8090"
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8090"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+
+# nats:
+#     image: nats:2.12-alpine
+#     container_name: nats
+#     restart: always
+#     ports:
+#       - "4222:4222"   # клиентский порт
+#       - "8222:8222"   # HTTP мониторинг (опционально)
+#     command: -js  # включить JetStream
+#     volumes:
+#       - nats-data:/data  # персистентность
+
+volumes:
+    postgres_volume:
+
+networks:
+  default:
+    name: shared-net
+    external: true
