@@ -33,6 +33,7 @@ services:
         condition: service_healthy
   
   grpcui:
+    container_name: grpcui-posts-processor
     image: fullstorydev/grpcui
     entrypoint: ["grpcui", "-plaintext", "-bind", "0.0.0.0", "-port", "8080", "posts-processor:8090"]
     ports:
@@ -99,6 +100,17 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+
+# nats:
+#     image: nats:2.12-alpine
+#     container_name: nats
+#     restart: always
+#     ports:
+#       - "4222:4222"   # клиентский порт
+#       - "8222:8222"   # HTTP мониторинг (опционально)
+#     command: -js  # включить JetStream
+#     volumes:
+#       - nats-data:/data  # персистентность
 
 volumes:
     postgres_volume:

@@ -76,7 +76,7 @@ func scanPosts(rows pgx.Rows) ([]*OriginalPost, error) {
 		}
 
 		if linkOriginalPost.Valid {
-			orPost.LinkOriginalPost = originalImageURL.String
+			orPost.LinkOriginalPost = linkOriginalPost.String
 		}
 		if originalChannel.Valid {
 			orPost.OriginalChannel = originalChannel.String

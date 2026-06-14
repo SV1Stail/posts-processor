@@ -8,4 +8,4 @@ RUN go mod download
 
 RUN CGO_ENABLED=0 GOOS=linux go build -mod vendor -a -o /bin/posts-processor /app/cmd/main.go
 
-ENTRYPOINT ["/bin/queue-scheduler"]
+ENTRYPOINT ["/bin/posts-processor"]
